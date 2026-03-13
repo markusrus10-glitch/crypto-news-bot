@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(python main.py)",
+      "Bash(taskkill /F /IM python.exe /T)",
+      "Bash(python -c \":*)",
+      "Bash(taskkill /F /IM python3.exe /T)",
+      "Bash(tasklist)",
+      "Bash(taskkill /F /PID 22584)",
+      "Bash(__NEW_LINE_4529d48ef0694c3e__ curl:*)",
+      "Bash(wmic process:*)",
+      "Bash(taskkill /F /IM python.exe 2)",
+      "Bash(/dev/null sleep:*)",
+      "Bash(echo killed:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(cmd.exe /c \"schtasks /create /tn TelegramNewsBot /tr \"\"C:\\\\Users\\\\curti\\\\БОТ новости\\\\start_bot.bat\"\" /sc onlogon /ru %USERNAME% /f\")",
+      "Bash(powershell -Command \":*)",
+      "Bash(git --version)",
+      "Bash(gh --version)",
+      "Bash(npm --version)",
+      "Bash(npm install:*)",
+      "Bash(winget install:*)"
+    ]
+  }
+}
