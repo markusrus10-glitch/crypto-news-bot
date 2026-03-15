@@ -1,9 +1,7 @@
 """
-Crypto & Stock News Analysis Telegram Bot
-Analyzes news from multiple sources and provides trading recommendations.
+Crypto & Stock News Analysis Telegram Bot — Webhook mode for Render.com
 """
 
-import asyncio
 import os
 import logging
 import threading
@@ -37,6 +35,8 @@ logger = logging.getLogger(__name__)
 
 ALLOWED_USERS: list[int] = []
 AUTO_INTERVAL = 3 * 60 * 60
+
+RENDER_URL = os.getenv("RENDER_URL", "https://crypto-news-bot-vhc2.onrender.com")
 
 MAIN_KEYBOARD = ReplyKeyboardMarkup(
     [
@@ -293,25 +293,13 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 
-def start_health_server():
-    port = int(os.getenv("PORT", 10000))
-    class Handler(BaseHTTPRequestHandler):
-        def do_GET(self):
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(b"OK")
-        def log_message(self, *args):
-            pass
-    HTTPServer(("0.0.0.0", port), Handler).serve_forever()
-
-
 def main() -> None:
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not token:
-        raise ValueError("TELEGRAM_BOT_TOKEN не задан в .env файле")
+        raise ValueError("TELEGRAM_BOT_TOKEN не задан")
 
-    threading.Thread(target=start_health_server, daemon=True).start()
-    logger.info("Health server started on port %s", os.getenv("PORT", 10000))
+    port = int(os.getenv("PORT", 10000))
+    webhook_url = f"{RENDER_URL}/{token}"
 
     app = Application.builder().token(token).build()
     app.add_handler(CommandHandler("start", cmd_start))
@@ -320,19 +308,15 @@ def main() -> None:
     app.add_handler(CallbackQueryHandler(button_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
 
-    logger.info("Bot started!")
+    logger.info(f"Starting webhook on port {port}, url: {webhook_url}")
 
-    from telegram.error import Conflict
-    retries = 0
-    while True:
-        try:
-            app.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
-            break
-        except Conflict:
-            retries += 1
-            wait = min(30 * retries, 120)
-            logger.warning(f"Conflict (попытка {retries}), жду {wait}с...")
-            time.sleep(wait)
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        url_path=token,
+        webhook_url=webhook_url,
+        drop_pending_updates=True,
+    )
 
 
 if __name__ == "__main__":
