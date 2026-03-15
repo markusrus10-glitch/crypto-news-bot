@@ -9,8 +9,6 @@ import logging
 from datetime import datetime
 from pathlib import Path
 import time
-import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
 
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
@@ -382,20 +380,6 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 
-def start_health_server():
-    """Minimal HTTP server for Render health checks."""
-    port = int(os.getenv("PORT", 10000))
-    class Handler(BaseHTTPRequestHandler):
-        def do_GET(self):
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(b"OK")
-        def log_message(self, *args):
-            pass
-    server = HTTPServer(("0.0.0.0", port), Handler)
-    server.serve_forever()
-
-
 def main() -> None:
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not token:
@@ -413,26 +397,36 @@ def main() -> None:
     app.add_handler(CallbackQueryHandler(button_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
 
-    # Запускаем HTTP healthcheck для Render
-    threading.Thread(target=start_health_server, daemon=True).start()
-    logger.info("Health server started on port %s", os.getenv("PORT", 10000))
+    webhook_url = os.getenv("WEBHOOK_URL", "")
+    port = int(os.getenv("PORT", 10000))
 
-    logger.info("Bot started!")
-
-    from telegram.error import Conflict
-    retries = 0
-    while True:
-        try:
-            app.run_polling(
-                allowed_updates=Update.ALL_TYPES,
-                drop_pending_updates=True,
-            )
-            break
-        except Conflict:
-            retries += 1
-            wait = min(30 * retries, 120)
-            logger.warning(f"Conflict (попытка {retries}), жду {wait}с...")
-            time.sleep(wait)
+    if webhook_url:
+        # Режим webhook (Render/облако) — Telegram сам шлёт обновления
+        logger.info(f"Starting webhook on port {port}, url={webhook_url}")
+        app.run_webhook(
+            listen="0.0.0.0",
+            port=port,
+            webhook_url=webhook_url,
+            allowed_updates=Update.ALL_TYPES,
+            drop_pending_updates=True,
+        )
+    else:
+        # Режим polling (локально)
+        logger.info("Starting polling...")
+        from telegram.error import Conflict
+        retries = 0
+        while True:
+            try:
+                app.run_polling(
+                    allowed_updates=Update.ALL_TYPES,
+                    drop_pending_updates=True,
+                )
+                break
+            except Conflict:
+                retries += 1
+                wait = min(30 * retries, 120)
+                logger.warning(f"Conflict (попытка {retries}), жду {wait}с...")
+                time.sleep(wait)
 
 
 if __name__ == "__main__":
