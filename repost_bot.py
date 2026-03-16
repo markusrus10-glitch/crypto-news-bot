@@ -349,7 +349,9 @@ async def publish_queue_job(context: ContextTypes.DEFAULT_TYPE):
     post = auto_post_queue.pop(0)
     logger.info(f'📤 Публикую из очереди: @{post["channel"]} #{post["id"]} (осталось в очереди: {len(auto_post_queue)})')
 
-    success = await post_to_channel(context, post['text_html'], post.get('photo_path'))
+    # Убираем все чужие ссылки — только наш футер остаётся
+    clean_text = strip_links(post['text_html'])
+    success = await post_to_channel(context, clean_text, post.get('photo_path'))
     cleanup_file(post.get('photo_path'))
 
     if not success:
