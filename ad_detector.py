@@ -162,6 +162,21 @@ PINNED_PATTERNS = [
     r'закреплено\s+[«"]',
 ]
 
+# Паттерны рекламных приглашений/CTA (без новостного контента)
+PROMO_CTA_PATTERNS = [
+    r'^вступ(ить|ай|айте)\s+в\b',
+    r'^присоедин',
+    r'^подпишись\b',
+    r'^переход(и|ите)\s+по\b',
+    r'^жми\s+(на\s+)?ссылку',
+    r'^кликай\b',
+    r'^регистрир',
+    r'^записыва',
+    r'^следи\s+за\b',
+    r'^наш\s+канал\b',
+    r'^наши\s+ссылки\b',
+]
+
 # Если пост содержит эти слова — скорее всего важный контент
 QUALITY_KEYWORDS = [
     'airdrop', 'эйрдроп', 'дроп', 'листинг', 'listing',
@@ -199,6 +214,11 @@ def is_low_quality(text: str) -> tuple[bool, str]:
     for pattern in PINNED_PATTERNS:
         if re.search(pattern, text_lower):
             return True, 'Уведомление о закреплении поста'
+
+    # Рекламное приглашение / CTA без новостного контента
+    for pattern in PROMO_CTA_PATTERNS:
+        if re.search(pattern, text_lower):
+            return True, 'Рекламное приглашение / CTA'
 
     # Только цены без контекста (короткий пост с ценами)
     if len(text_stripped) < 150:

@@ -351,6 +351,14 @@ async def publish_queue_job(context: ContextTypes.DEFAULT_TYPE):
 
     # Убираем все чужие ссылки — только наш футер остаётся
     clean_text = strip_links(post['text_html'])
+
+    # Если после удаления ссылок текст пустой или слишком короткий — пропускаем
+    plain_after = re.sub(r'\s+', ' ', clean_text).strip()
+    if len(plain_after) < 40:
+        logger.info(f'⏭ Пропускаю пост @{post["channel"]} #{post["id"]}: после удаления ссылок текст слишком короткий ({len(plain_after)} символов)')
+        cleanup_file(post.get('photo_path'))
+        return
+
     success = await post_to_channel(context, clean_text, post.get('photo_path'))
     cleanup_file(post.get('photo_path'))
 
